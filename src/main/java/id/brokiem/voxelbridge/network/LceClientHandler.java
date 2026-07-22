@@ -34,6 +34,7 @@ public class LceClientHandler extends ChannelInboundHandlerAdapter {
         Bootstrap b = new Bootstrap();
         b.group(ctx.channel().eventLoop())
                 .channel(NioSocketChannel.class)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)  // 5 second timeout
                 .handler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) {
@@ -55,7 +56,8 @@ public class LceClientHandler extends ChannelInboundHandlerAdapter {
                 session.flushPendingServerbound();
             } else {
                 Throwable cause = future.cause();
-                log.error("[LCE] Failed to connect to {}:{}: {}", targetHost, targetPort, cause != null ? cause.getMessage() : "unknown", cause);
+                log.error("[LCE] Failed to connect to {}:{}: {}", targetHost, targetPort, 
+                        cause != null ? cause.getMessage() : "unknown", cause);
                 ctx.close();
             }
         });
@@ -69,6 +71,8 @@ public class LceClientHandler extends ChannelInboundHandlerAdapter {
             } else {
                 log.debug("[LCE] Unhandled message: {}", msg.getClass().getSimpleName());
             }
+        } catch (Exception e) {
+            log.error("[LCE] Exception processing packet: {}", e.getMessage(), e);
         } finally {
             ReferenceCountUtil.release(msg);
         }
@@ -79,7 +83,7 @@ public class LceClientHandler extends ChannelInboundHandlerAdapter {
         log.info("[LCE] Client disconnected: {}", ctx.channel().remoteAddress());
         if (sessionHandler != null) {
             Channel serverChannel = sessionHandler.getSession().getServerChannel();
-            if (serverChannel != null) {
+            if (serverChannel != null && serverChannel.isActive()) {
                 serverChannel.close();
             }
         }

@@ -20,83 +20,93 @@ public class SessionHandler {
     }
 
     public void handleServerbound(Packet packet) {
-        TranslationResult result = translatorRegistry.translateServerbound(packet, session);
-        if (result == null) {
-            return;
-        }
-
-        if (result.newState() != null) {
-            log.debug("[Session] State transition {} -> {}", session.getState(), result.newState());
-            session.setState(result.newState());
-        }
-
-        if (result.packets().isEmpty()) {
-            return;
-        }
-
-        Channel target = resolveTarget(result);
-        if (result.target() == TranslationTarget.SERVER) {
-            if (target != null && target.isActive()) {
-                for (Packet out : result.packets()) {
-                    target.write(out);
-                }
-                target.flush();
-            } else {
-                for (Packet out : result.packets()) {
-                    session.queueForServer(out);
-                }
-                log.debug("[Session] Queued {} serverbound packets (Java connection pending)", result.packets().size());
+        try {
+            TranslationResult result = translatorRegistry.translateServerbound(packet, session);
+            if (result == null) {
+                return;
             }
-        } else {
-            if (target != null && target.isActive()) {
-                for (Packet out : result.packets()) {
-                    target.write(out);
-                }
-                target.flush();
-            } else {
-                log.warn("[Session] Target channel unavailable");
+
+            if (result.newState() != null) {
+                log.debug("[Session] State transition {} -> {}", session.getState(), result.newState());
+                session.setState(result.newState());
             }
+
+            if (result.packets().isEmpty()) {
+                return;
+            }
+
+            Channel target = resolveTarget(result);
+            if (result.target() == TranslationTarget.SERVER) {
+                if (target != null && target.isActive()) {
+                    for (Packet out : result.packets()) {
+                        target.write(out);
+                    }
+                    target.flush();
+                } else {
+                    for (Packet out : result.packets()) {
+                        session.queueForServer(out);
+                    }
+                    log.debug("[Session] Queued {} serverbound packets (Java connection pending)", result.packets().size());
+                }
+            } else {
+                if (target != null && target.isActive()) {
+                    for (Packet out : result.packets()) {
+                        target.write(out);
+                    }
+                    target.flush();
+                } else {
+                    log.warn("[Session] Target channel unavailable for clientbound packets");
+                }
+            }
+        } catch (Exception e) {
+            log.error("[Session] Exception in handleServerbound for packet 0x{}: {}", 
+                    Integer.toHexString(packet.getId()), e.getMessage(), e);
         }
     }
 
     public void handleClientbound(Packet packet) {
-        TranslationResult result = translatorRegistry.translateClientbound(packet, session);
-        if (result == null) {
-            return;
-        }
-
-        if (result.newState() != null) {
-            log.debug("[Session] State transition {} -> {}", session.getState(), result.newState());
-            session.setState(result.newState());
-        }
-
-        if (result.packets().isEmpty() && (result.serverPackets() == null || result.serverPackets().isEmpty())) {
-            return;
-        }
-
-        Channel clientChannel = session.getClientChannel();
-        if (clientChannel != null && clientChannel.isActive() && !result.packets().isEmpty()) {
-            for (Packet out : result.packets()) {
-                clientChannel.write(out);
+        try {
+            TranslationResult result = translatorRegistry.translateClientbound(packet, session);
+            if (result == null) {
+                return;
             }
-            clientChannel.flush();
-        } else if (!result.packets().isEmpty()) {
-            log.warn("[Session] Client channel unavailable for clientbound packets");
-        }
 
-        if (result.serverPackets() != null && !result.serverPackets().isEmpty()) {
-            Channel serverChannel = session.getServerChannel();
-            if (serverChannel != null && serverChannel.isActive()) {
-                for (Packet out : result.serverPackets()) {
-                    serverChannel.write(out);
-                }
-                serverChannel.flush();
-            } else {
-                for (Packet out : result.serverPackets()) {
-                    session.queueForServer(out);
-                }
-                log.debug("[Session] Queued {} server response packets (Java connection pending)", result.serverPackets().size());
+            if (result.newState() != null) {
+                log.debug("[Session] State transition {} -> {}", session.getState(), result.newState());
+                session.setState(result.newState());
             }
+
+            if (result.packets().isEmpty() && (result.serverPackets() == null || result.serverPackets().isEmpty())) {
+                return;
+            }
+
+            Channel clientChannel = session.getClientChannel();
+            if (clientChannel != null && clientChannel.isActive() && !result.packets().isEmpty()) {
+                for (Packet out : result.packets()) {
+                    clientChannel.write(out);
+                }
+                clientChannel.flush();
+            } else if (!result.packets().isEmpty()) {
+                log.warn("[Session] Client channel unavailable for clientbound packets");
+            }
+
+            if (result.serverPackets() != null && !result.serverPackets().isEmpty()) {
+                Channel serverChannel = session.getServerChannel();
+                if (serverChannel != null && serverChannel.isActive()) {
+                    for (Packet out : result.serverPackets()) {
+                        serverChannel.write(out);
+                    }
+                    serverChannel.flush();
+                } else {
+                    for (Packet out : result.serverPackets()) {
+                        session.queueForServer(out);
+                    }
+                    log.debug("[Session] Queued {} server response packets (Java connection pending)", result.serverPackets().size());
+                }
+            }
+        } catch (Exception e) {
+            log.error("[Session] Exception in handleClientbound for packet 0x{}: {}", 
+                    Integer.toHexString(packet.getId()), e.getMessage(), e);
         }
     }
 

@@ -26,6 +26,8 @@ public class JavaServerHandler extends ChannelInboundHandlerAdapter {
             } else {
                 log.debug("[Java] Unhandled message: {}", msg.getClass().getSimpleName());
             }
+        } catch (Exception e) {
+            log.error("[Java] Exception processing packet: {}", e.getMessage(), e);
         } finally {
             ReferenceCountUtil.release(msg);
         }
@@ -33,7 +35,8 @@ public class JavaServerHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        if (session.getClientChannel() != null) {
+        log.info("[Java] Server disconnected");
+        if (session != null && session.getClientChannel() != null && session.getClientChannel().isActive()) {
             session.getClientChannel().close();
         }
     }
