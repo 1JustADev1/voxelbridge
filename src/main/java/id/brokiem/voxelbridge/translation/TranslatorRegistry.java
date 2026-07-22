@@ -68,6 +68,8 @@ public class TranslatorRegistry {
         clientbound.get(ConnectionState.PLAY).put(0x1D, new JavaEntityEffectTranslator());
         clientbound.get(ConnectionState.PLAY).put(0x1E, new JavaRemoveEntityEffectTranslator());
         clientbound.get(ConnectionState.PLAY).put(0x22, new JavaMultiBlockChangeTranslator());
+        clientbound.get(ConnectionState.PLAY).put(0x27, new JavaExplosionTranslator());
+        clientbound.get(ConnectionState.PLAY).put(0x35, new JavaBlockBreakAnimationTranslator());
         clientbound.get(ConnectionState.PLAY).put(0x2B, new JavaGameStateChangeTranslator());
         clientbound.get(ConnectionState.PLAY).put(0x39, new JavaAbilitiesTranslator());
         clientbound.get(ConnectionState.PLAY).put(0x40, new JavaKickDisconnectTranslator());
